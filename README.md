@@ -17,8 +17,8 @@
 ## 需要的 Secrets（Settings → Secrets and variables → Actions）
 | 名称 | 例子 |
 |---|---|
-| `SMTP_HOST` | `smtp.126.com` |
-| `SMTP_PORT` | `465` |
+| `SMTP_HOST` | 可选，默认 `smtp.gmail.com` |
+| `SMTP_PORT` | 可选，默认 `465` |
 | `SMTP_USER` | 发件邮箱地址 |
 | `SMTP_PASS` | 邮箱的 SMTP 授权码（不是登录密码） |
 | `MAIL_TO` | 可选，覆盖 config.json 里的收件人 |

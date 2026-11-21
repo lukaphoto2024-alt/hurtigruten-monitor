@@ -141,11 +141,11 @@ def find_hits(fetcher):
 
 
 def send_mail(subject, body):
-    host = os.environ["SMTP_HOST"]
-    port = int(os.environ.get("SMTP_PORT", "465"))
+    host = os.environ.get("SMTP_HOST") or "smtp.gmail.com"
+    port = int(os.environ.get("SMTP_PORT") or "465")
     user = os.environ["SMTP_USER"]
-    pwd = os.environ["SMTP_PASS"]
-    to = [a.strip() for a in os.environ.get("MAIL_TO", CONFIG["mail_to"]).split(",") if a.strip()]
+    pwd = os.environ["SMTP_PASS"].replace(" ", "")
+    to = [a.strip() for a in (os.environ.get("MAIL_TO") or CONFIG["mail_to"]).split(",") if a.strip()]
     msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
     msg["From"] = user
@@ -193,7 +193,7 @@ def main():
     new = [h for h in hits
            if f"{h['date']}|{h['time']}|{h['cat']}" not in prev
            or (h["price"] or 0) < (prev[f"{h['date']}|{h['time']}|{h['cat']}"] or 0)]
-    if new and os.environ.get("SMTP_HOST"):
+    if new and os.environ.get("SMTP_PASS"):
         best = CATEGORY_INFO.get(new[0]["cat"], (new[0]["cat"],))[0].split("（")[0]
         body = ("有票啦！Tromsø → Svolvær 出现了可订舱位（2 人）：\n\n" + describe(new) +
                 "\n\n赶紧去官网订（舱位可能很快被抢走）：\n" + SEARCH_PAGE +
