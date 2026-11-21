@@ -1,10 +1,11 @@
 # Hurtigruten 舱位监控
 
-每 10 分钟查一次 Hurtigruten 港到港航线（默认 Tromsø → Svolvær，2027-02-07，2 人一间），
+每 10 分钟查一次 Hurtigruten 港到港航线（默认 Tromsø → Svolvær 和 Tromsø → Bodø，2027-02-07，2 人一间），
 发现可订的舱位就发邮件提醒。**只提醒，不自动下单。**
 
 ## 怎么改查询条件
 编辑 `config.json`：
+- `routes`：航线（港口代码：TOS=Tromsø，SVJ=Svolvær，BOO=Bodø）
 - `dates`：出发日期（挪威当地日期，可写多个，如 `["2027-02-07", "2027-02-08"]`）
 - `categories`：要盯的舱型
   - `PolarInside` 内舱（无窗，最便宜）

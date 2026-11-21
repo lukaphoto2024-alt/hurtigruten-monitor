@@ -44,7 +44,7 @@ def pax(n):
             "wheelchairs": 0, "pets": 0}
 
 
-def build_body(deck: bool):
+def build_body(route, deck: bool):
     dates = sorted(dt.date.fromisoformat(d) for d in CONFIG["dates"])
     # 和官网一样：起止都是挪威本地午夜，换成 UTC；前后各多查一天保险
     start = dt.datetime.combine(dates[0] - dt.timedelta(days=1), dt.time()) - NORWAY_OFFSET
@@ -56,7 +56,7 @@ def build_body(deck: bool):
         "fromDate": start.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
         "toDate": end.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
         "isReturnTrip": False, "isViaKirkenes": False,
-        "fromPort": CONFIG["from_port"], "toPort": CONFIG["to_port"],
+        "fromPort": route["from"], "toPort": route["to"],
         "deckspaces": p if deck else None,
         "cabins": [] if deck else [p],
         "vehicles": {"cars": 0, "motorcycles": 0},
@@ -121,14 +121,14 @@ def find_hits(fetcher):
     wanted_dates = set(CONFIG["dates"])
     wanted_cats = set(CONFIG["categories"])
     hits = []
-    for deck in (False, True):
+    for route, deck in [(r, d) for r in CONFIG["routes"] for d in (False, True)]:
         if deck and "DECK" not in wanted_cats:
             continue
-        for v in fetcher.post(build_body(deck)):
+        for v in fetcher.post(build_body(route, deck)):
             day, hhmm = local_date(v["departureDateTime"])
             if day not in wanted_dates:
                 continue
-            base = {"date": day, "time": hhmm, "ship": v.get("shipName", ""),
+            base = {"route": route["name"], "date": day, "time": hhmm, "ship": v.get("shipName", ""),
                     "arrive": " ".join(local_date(v["arrivalDateTime"]))}
             if deck:
                 hits.append({**base, "cat": "DECK", "price": v.get("price")})
@@ -136,7 +136,7 @@ def find_hits(fetcher):
                 for c in v.get("categoryPrices", []):
                     if c.get("isAvailable") and c["cabinCategory"] in wanted_cats:
                         hits.append({**base, "cat": c["cabinCategory"], "price": c.get("price")})
-    hits.sort(key=lambda h: (CATEGORY_INFO.get(h["cat"], ("", 9))[1], h["price"] or 0))
+    hits.sort(key=lambda h: (h["route"], CATEGORY_INFO.get(h["cat"], ("", 9))[1], h["price"] or 0))
     return hits
 
 
@@ -166,7 +166,7 @@ def describe(hits):
     lines = []
     for h in hits:
         name = CATEGORY_INFO.get(h["cat"], (h["cat"],))[0]
-        lines.append(f"• {name}\n  {h['date']} {h['time']} 从 Tromsø 出发 → {h['arrive']} 到 Svolvær"
+        lines.append(f"• 【{h['route']}】{name}\n  {h['date']} {h['time']} 出发 → {h['arrive']} 到达"
                      f"（{h['ship']}）\n  价格：{h['price']} NOK / 人")
     return "\n\n".join(lines)
 
@@ -188,18 +188,17 @@ def main():
     print(json.dumps(hits, ensure_ascii=False, indent=1) if hits else "暂无符合条件的舱位")
 
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
-    keys = {f"{h['date']}|{h['time']}|{h['cat']}": h["price"] for h in hits}
+    key = lambda h: f"{h['route']}|{h['date']}|{h['time']}|{h['cat']}"
+    keys = {key(h): h["price"] for h in hits}
     prev = state.get("available", {})
-    new = [h for h in hits
-           if f"{h['date']}|{h['time']}|{h['cat']}" not in prev
-           or (h["price"] or 0) < (prev[f"{h['date']}|{h['time']}|{h['cat']}"] or 0)]
+    new = [h for h in hits if key(h) not in prev or (h["price"] or 0) < (prev[key(h)] or 0)]
     if new and os.environ.get("SMTP_PASS"):
         best = CATEGORY_INFO.get(new[0]["cat"], (new[0]["cat"],))[0].split("（")[0]
-        body = ("有票啦！Tromsø → Svolvær 出现了可订舱位（2 人）：\n\n" + describe(new) +
+        body = ("有票啦！出现了可订舱位（2 人一间）：\n\n" + describe(new) +
                 "\n\n赶紧去官网订（舱位可能很快被抢走）：\n" + SEARCH_PAGE +
                 "\n\n提示：在官网选好航次后，下一步选舱时可以看床型（上下铺 / 双床）。"
                 "\n\n—— 这封邮件由自动监控发送，只提醒不下单。")
-        send_mail(f"【有票】挪威邮轮 Tromsø→Svolvær {new[0]['date']}：{best} {new[0]['price']} NOK", body)
+        send_mail(f"【有票】挪威邮轮 {new[0]['route']} {new[0]['date']}：{best} {new[0]['price']} NOK", body)
         print(f"已发送提醒邮件（{len(new)} 项新舱位）")
     # 只记录日期：每天最多产生一次提交，既不刷屏，又能让 GitHub 不因"60 天无活动"停掉定时任务
     state = {"available": keys, "checked_on": dt.date.today().isoformat()}

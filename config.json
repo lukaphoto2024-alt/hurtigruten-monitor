@@ -1,8 +1,25 @@
 {
-  "from_port": "TOS",
-  "to_port": "SVJ",
-  "dates": ["2027-02-07"],
+  "routes": [
+    {
+      "name": "Tromsø→Svolvær",
+      "from": "TOS",
+      "to": "SVJ"
+    },
+    {
+      "name": "Tromsø→Bodø",
+      "from": "TOS",
+      "to": "BOO"
+    }
+  ],
+  "dates": [
+    "2027-02-07"
+  ],
   "adults": 2,
-  "categories": ["PolarInside", "PolarOutside", "ArcticSuperior", "DECK"],
+  "categories": [
+    "PolarInside",
+    "PolarOutside",
+    "ArcticSuperior",
+    "DECK"
+  ],
   "mail_to": "mysir_@126.com"
 }
